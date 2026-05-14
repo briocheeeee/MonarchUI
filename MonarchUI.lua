@@ -29,14 +29,18 @@ local function CreateElement(className, properties)
 end
 
 local function Tween(object, properties, duration, style, direction)
+    if typeof(object) ~= "Instance" or not object.Parent then return nil end
     local tweenInfo = TweenInfo.new(
         duration or 0.3,
         style or Enum.EasingStyle.Quad,
         direction or Enum.EasingDirection.Out
     )
-    local tween = TweenService:Create(object, tweenInfo, properties)
-    tween:Play()
-    return tween
+    local ok, tween = pcall(TweenService.Create, TweenService, object, tweenInfo, properties)
+    if ok and tween then
+        tween:Play()
+        return tween
+    end
+    return nil
 end
 
 function MonarchUI:CreateWindow(config)
@@ -305,12 +309,22 @@ function MonarchUI:CreateWindow(config)
         
         local function ActivateTab()
             for _, tab in pairs(Window.Tabs) do
-                tab.Content.Visible = false
-                Tween(tab.Button, {BackgroundColor3 = COLORS.White}, 0.2)
-                Tween(tab.Label, {TextColor3 = COLORS.Gray}, 0.2)
-                Tween(tab.Icon, {TextColor3 = COLORS.Gray}, 0.2)
+                if tab.Content and typeof(tab.Content) == "Instance" then
+                    tab.Content.Visible = false
+                end
+                if tab.Button and typeof(tab.Button) == "Instance" then
+                    Tween(tab.Button, {BackgroundColor3 = COLORS.White}, 0.2)
+                end
+                if tab.Label and typeof(tab.Label) == "Instance" then
+                    Tween(tab.Label, {TextColor3 = COLORS.Gray}, 0.2)
+                end
+                if tab.Icon and typeof(tab.Icon) == "Instance" then
+                    Tween(tab.Icon, {TextColor3 = COLORS.Gray}, 0.2)
+                end
             end
-            TabContent.Visible = true
+            if TabContent and typeof(TabContent) == "Instance" then
+                TabContent.Visible = true
+            end
             Tween(TabButton, {BackgroundColor3 = COLORS.Orange}, 0.2)
             Tween(TabLabel, {TextColor3 = COLORS.White}, 0.2)
             Tween(TabIcon, {TextColor3 = COLORS.White}, 0.2)
