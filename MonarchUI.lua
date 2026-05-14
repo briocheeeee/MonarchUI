@@ -17,7 +17,6 @@ local COLORS = {
     Success = Color3.fromRGB(34, 197, 94),
     Error = Color3.fromRGB(239, 68, 68),
     Background = Color3.fromRGB(255, 255, 255),
-    Shadow = Color3.fromRGB(0, 0, 0),
 }
 
 local function CreateElement(className, properties)
@@ -66,18 +65,20 @@ function MonarchUI:CreateWindow(config)
         Parent = ScreenGui
     })
     
-    local Shadow = CreateElement("ImageLabel", {
+    local Shadow = CreateElement("Frame", {
         Name = "Shadow",
-        Size = UDim2.new(1, 40, 1, 40),
-        Position = UDim2.fromOffset(-20, -20),
-        BackgroundTransparency = 1,
-        Image = "rbxasset://textures/ui/GuiImagePlaceholder.png",
-        ImageColor3 = COLORS.Shadow,
-        ImageTransparency = 0.9,
-        ScaleType = Enum.ScaleType.Slice,
-        SliceCenter = Rect.new(10, 10, 118, 118),
+        Size = UDim2.new(1, 0, 1, 0),
+        Position = UDim2.new(0, 4, 0, 4),
+        BackgroundColor3 = COLORS.Black,
+        BackgroundTransparency = 0.9,
+        BorderSizePixel = 0,
         ZIndex = 0,
         Parent = MainFrame
+    })
+    
+    CreateElement("UICorner", {
+        CornerRadius = UDim.new(0, 14),
+        Parent = Shadow
     })
     
     CreateElement("UICorner", {
@@ -87,8 +88,8 @@ function MonarchUI:CreateWindow(config)
     
     local TopBar = CreateElement("Frame", {
         Name = "TopBar",
-        Size = UDim2.new(1, 0, 0, 60),
-        BackgroundColor3 = COLORS.WarmBg,
+        Size = UDim2.new(1, 0, 0, 50),
+        BackgroundColor3 = COLORS.Background,
         BorderSizePixel = 0,
         Parent = MainFrame
     })
@@ -98,10 +99,10 @@ function MonarchUI:CreateWindow(config)
         Parent = TopBar
     })
     
-    local BottomCover = CreateElement("Frame", {
-        Size = UDim2.new(1, 0, 0, 12),
-        Position = UDim2.new(0, 0, 1, -12),
-        BackgroundColor3 = COLORS.WarmBg,
+    local TopBarBorder = CreateElement("Frame", {
+        Size = UDim2.new(1, 0, 0, 1),
+        Position = UDim2.new(0, 0, 1, -1),
+        BackgroundColor3 = COLORS.GrayBorder,
         BorderSizePixel = 0,
         Parent = TopBar
     })
@@ -153,8 +154,8 @@ function MonarchUI:CreateWindow(config)
     
     local TabBar = CreateElement("Frame", {
         Name = "TabBar",
-        Size = UDim2.new(0, 180, 1, -60),
-        Position = UDim2.fromOffset(0, 60),
+        Size = UDim2.new(0, 180, 1, -50),
+        Position = UDim2.fromOffset(0, 50),
         BackgroundColor3 = COLORS.WarmBg,
         BorderSizePixel = 0,
         Parent = MainFrame
@@ -190,47 +191,45 @@ function MonarchUI:CreateWindow(config)
     
     local ContentFrame = CreateElement("Frame", {
         Name = "Content",
-        Size = UDim2.new(1, -190, 1, -70),
-        Position = UDim2.fromOffset(185, 65),
+        Size = UDim2.new(1, -190, 1, -60),
+        Position = UDim2.fromOffset(185, 55),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         Parent = MainFrame
     })
     
     local dragging = false
-    local dragInput, mousePos, framePos
+    local dragInput, dragStart, startPos
     
     TopBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
-            mousePos = input.Position
-            framePos = MainFrame.Position
-            
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
+            dragStart = input.Position
+            startPos = MainFrame.Position
         end
     end)
     
     TopBar.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
     end)
     
     UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - mousePos
-            Tween(MainFrame, {
-                Position = UDim2.new(
-                    framePos.X.Scale,
-                    framePos.X.Offset + delta.X,
-                    framePos.Y.Scale,
-                    framePos.Y.Offset + delta.Y
-                )
-            }, 0.1, Enum.EasingStyle.Linear)
+        if dragging and input == dragInput then
+            local delta = input.Position - dragStart
+            MainFrame.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
         end
     end)
     
@@ -609,32 +608,34 @@ function MonarchUI:CreateWindow(config)
                 value = math.clamp(value, min, max)
                 
                 SliderValue.Text = tostring(value)
-                Tween(SliderFill, {Size = UDim2.new(pos, 0, 1, 0)}, 0.1)
-                Tween(SliderButton, {Position = UDim2.new(pos, -8, 0.5, -8)}, 0.1)
+                SliderFill.Size = UDim2.new(pos, 0, 1, 0)
+                SliderButton.Position = UDim2.new(pos, -8, 0.5, -8)
                 
                 if config.Callback then
                     config.Callback(value)
                 end
             end
             
-            SliderButton.MouseButton1Down:Connect(function()
-                dragging = true
+            SliderButton.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    dragging = true
+                end
             end)
             
             UserInputService.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     dragging = false
                 end
             end)
             
             UserInputService.InputChanged:Connect(function(input)
-                if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
                     updateSlider(input)
                 end
             end)
             
             SliderTrack.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     updateSlider(input)
                 end
             end)
@@ -958,11 +959,15 @@ function MonarchUI:CreateWindow(config)
                 Parent = Colorpicker
             })
             
-            local ColorPreview = CreateElement("Frame", {
+            local currentColor = config.Value or COLORS.Orange
+            
+            local ColorPreview = CreateElement("TextButton", {
                 Size = UDim2.fromOffset(35, 25),
                 Position = UDim2.new(1, -45, 0.5, -12.5),
-                BackgroundColor3 = config.Value or COLORS.Orange,
+                BackgroundColor3 = currentColor,
                 BorderSizePixel = 0,
+                Text = "",
+                AutoButtonColor = false,
                 Parent = Colorpicker
             })
             
@@ -976,6 +981,102 @@ function MonarchUI:CreateWindow(config)
                 Thickness = 2,
                 Parent = ColorPreview
             })
+            
+            local PaletteOpen = false
+            local PaletteFrame
+            
+            local paletteColors = {
+                COLORS.Orange,
+                Color3.fromRGB(255, 0, 0),
+                Color3.fromRGB(0, 255, 0),
+                Color3.fromRGB(0, 0, 255),
+                Color3.fromRGB(255, 255, 0),
+                Color3.fromRGB(255, 0, 255),
+                Color3.fromRGB(0, 255, 255),
+                Color3.fromRGB(255, 255, 255),
+                Color3.fromRGB(0, 0, 0),
+                Color3.fromRGB(128, 128, 128),
+                Color3.fromRGB(255, 165, 0),
+                Color3.fromRGB(128, 0, 128),
+                Color3.fromRGB(255, 192, 203),
+                Color3.fromRGB(165, 42, 42),
+                Color3.fromRGB(0, 128, 0),
+                Color3.fromRGB(0, 0, 128),
+                Color3.fromRGB(255, 215, 0),
+                Color3.fromRGB(64, 224, 208),
+            }
+            
+            ColorPreview.MouseButton1Click:Connect(function()
+                if PaletteOpen and PaletteFrame then
+                    PaletteFrame:Destroy()
+                    PaletteOpen = false
+                    return
+                end
+                
+                PaletteFrame = CreateElement("Frame", {
+                    Size = UDim2.new(0, 200, 0, 110),
+                    Position = UDim2.new(1, -205, 1, 5),
+                    BackgroundColor3 = COLORS.White,
+                    BorderSizePixel = 0,
+                    ZIndex = 50,
+                    Parent = Colorpicker
+                })
+                
+                CreateElement("UICorner", {
+                    CornerRadius = UDim.new(0, 8),
+                    Parent = PaletteFrame
+                })
+                
+                CreateElement("UIStroke", {
+                    Color = COLORS.GrayBorder,
+                    Thickness = 1,
+                    Parent = PaletteFrame
+                })
+                
+                local Grid = CreateElement("Frame", {
+                    Size = UDim2.new(1, -10, 1, -10),
+                    Position = UDim2.fromOffset(5, 5),
+                    BackgroundTransparency = 1,
+                    ZIndex = 50,
+                    Parent = PaletteFrame
+                })
+                
+                CreateElement("UIGridLayout", {
+                    CellSize = UDim2.fromOffset(28, 28),
+                    CellPadding = UDim2.fromOffset(4, 4),
+                    HorizontalAlignment = Enum.HorizontalAlignment.Center,
+                    VerticalAlignment = Enum.VerticalAlignment.Center,
+                    Parent = Grid
+                })
+                
+                for _, color in ipairs(paletteColors) do
+                    local Swatch = CreateElement("TextButton", {
+                        Size = UDim2.fromOffset(28, 28),
+                        BackgroundColor3 = color,
+                        BorderSizePixel = 0,
+                        Text = "",
+                        ZIndex = 50,
+                        Parent = Grid
+                    })
+                    
+                    CreateElement("UICorner", {
+                        CornerRadius = UDim.new(0, 4),
+                        Parent = Swatch
+                    })
+                    
+                    Swatch.MouseButton1Click:Connect(function()
+                        currentColor = color
+                        ColorPreview.BackgroundColor3 = currentColor
+                        PaletteFrame:Destroy()
+                        PaletteOpen = false
+                        if config.Callback then
+                            config.Callback(currentColor)
+                        end
+                    end)
+                end
+                
+                PaletteOpen = true
+            end)
             
             return Colorpicker
         end
@@ -1030,26 +1131,64 @@ function MonarchUI:CreateWindow(config)
             })
             
             local binding = false
+            local bindConnection
+            
+            local function getKeyDisplay(value)
+                if typeof(value) == "EnumItem" then
+                    return value.Name
+                elseif typeof(value) == "string" then
+                    return value
+                end
+                return "None"
+            end
             
             KeybindButton.MouseButton1Click:Connect(function()
+                if binding then
+                    binding = false
+                    KeybindButton.Text = getKeyDisplay(config.Value)
+                    Tween(KeybindButton, {BackgroundColor3 = COLORS.GrayLight}, 0.2)
+                    if bindConnection then
+                        bindConnection:Disconnect()
+                        bindConnection = nil
+                    end
+                    return
+                end
+                
                 binding = true
                 KeybindButton.Text = "..."
                 Tween(KeybindButton, {BackgroundColor3 = COLORS.Orange}, 0.2)
-            end)
-            
-            UserInputService.InputBegan:Connect(function(input, gameProcessed)
-                if binding and not gameProcessed then
+                
+                bindConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+                    if not binding then return end
+                    if gameProcessed then return end
+                    
+                    if input.KeyCode == Enum.KeyCode.Escape then
+                        binding = false
+                        KeybindButton.Text = getKeyDisplay(config.Value)
+                        Tween(KeybindButton, {BackgroundColor3 = COLORS.GrayLight}, 0.2)
+                        if bindConnection then
+                            bindConnection:Disconnect()
+                            bindConnection = nil
+                        end
+                        return
+                    end
+                    
                     if input.KeyCode ~= Enum.KeyCode.Unknown then
                         local keyName = input.KeyCode.Name
+                        config.Value = input.KeyCode
                         KeybindButton.Text = keyName
                         binding = false
                         Tween(KeybindButton, {BackgroundColor3 = COLORS.GrayLight}, 0.2)
+                        if bindConnection then
+                            bindConnection:Disconnect()
+                            bindConnection = nil
+                        end
                         
                         if config.Callback then
-                            config.Callback(keyName)
+                            config.Callback(input.KeyCode)
                         end
                     end
-                end
+                end)
             end)
             
             return Keybind
@@ -1076,9 +1215,11 @@ function MonarchUI:CreateWindow(config)
     end
     
     function Window:Notify(config)
+        Window.NotifOffset = Window.NotifOffset or 0
+        
         local Notification = CreateElement("Frame", {
             Size = UDim2.fromOffset(300, 0),
-            Position = UDim2.new(1, -320, 1, -20),
+            Position = UDim2.new(1, -320, 1, 20),
             BackgroundColor3 = COLORS.White,
             BorderSizePixel = 0,
             Parent = ScreenGui
@@ -1132,15 +1273,21 @@ function MonarchUI:CreateWindow(config)
         NotifContent.Size = UDim2.new(1, -20, 0, textBounds.Y)
         
         Notification.Size = UDim2.fromOffset(300, notifHeight)
-        Notification.Position = UDim2.new(1, -320, 1, 20)
         
-        Tween(Notification, {Position = UDim2.new(1, -320, 1, -notifHeight - 20)}, 0.3, Enum.EasingStyle.Back)
+        local offset = Window.NotifOffset
+        Window.NotifOffset = Window.NotifOffset + notifHeight + 12
         
-        task.wait(config.Duration or 3)
+        Tween(Notification, {Position = UDim2.new(1, -320, 1, -notifHeight - 20 - offset)}, 0.3, Enum.EasingStyle.Back)
         
-        Tween(Notification, {Position = UDim2.new(1, -320, 1, 20)}, 0.3)
-        task.wait(0.3)
-        Notification:Destroy()
+        task.delay(config.Duration or 3, function()
+            if Notification and Notification.Parent then
+                Tween(Notification, {Position = UDim2.new(1, -320, 1, 20)}, 0.3)
+                task.wait(0.35)
+                if Notification and Notification.Parent then
+                    Notification:Destroy()
+                end
+            end
+        end)
     end
     
     Window:SetToggleKey(Enum.KeyCode.RightShift)
