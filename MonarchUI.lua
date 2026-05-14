@@ -643,7 +643,7 @@ function MonarchUI:CreateWindow(config)
         end
         
         function Tab:Dropdown(config)
-            local Dropdown = CreateElement("Frame", {
+            local DropdownFrame = CreateElement("Frame", {
                 Name = "Dropdown",
                 Size = UDim2.new(1, 0, 0, 45),
                 BackgroundColor3 = COLORS.White,
@@ -653,13 +653,13 @@ function MonarchUI:CreateWindow(config)
             
             CreateElement("UICorner", {
                 CornerRadius = UDim.new(0, 8),
-                Parent = Dropdown
+                Parent = DropdownFrame
             })
             
             CreateElement("UIStroke", {
                 Color = COLORS.GrayBorder,
                 Thickness = 1,
-                Parent = Dropdown
+                Parent = DropdownFrame
             })
             
             local DropdownLabel = CreateElement("TextLabel", {
@@ -671,7 +671,7 @@ function MonarchUI:CreateWindow(config)
                 TextSize = 14,
                 Font = Enum.Font.GothamMedium,
                 TextXAlignment = Enum.TextXAlignment.Left,
-                Parent = Dropdown
+                Parent = DropdownFrame
             })
             
             local DropdownValue = CreateElement("TextLabel", {
@@ -683,14 +683,14 @@ function MonarchUI:CreateWindow(config)
                 TextSize = 12,
                 Font = Enum.Font.Gotham,
                 TextXAlignment = Enum.TextXAlignment.Left,
-                Parent = Dropdown
+                Parent = DropdownFrame
             })
             
             local DropdownButton = CreateElement("TextButton", {
                 Size = UDim2.new(1, 0, 1, 0),
                 BackgroundTransparency = 1,
                 Text = "",
-                Parent = Dropdown
+                Parent = DropdownFrame
             })
             
             local DropdownIcon = CreateElement("TextLabel", {
@@ -701,7 +701,7 @@ function MonarchUI:CreateWindow(config)
                 TextColor3 = COLORS.Gray,
                 TextSize = 10,
                 Font = Enum.Font.GothamBold,
-                Parent = Dropdown
+                Parent = DropdownFrame
             })
             
             local DropdownList = CreateElement("Frame", {
@@ -711,7 +711,7 @@ function MonarchUI:CreateWindow(config)
                 BorderSizePixel = 0,
                 Visible = false,
                 ZIndex = 10,
-                Parent = Dropdown
+                Parent = DropdownFrame
             })
             
             CreateElement("UICorner", {
@@ -732,11 +732,10 @@ function MonarchUI:CreateWindow(config)
                 ScrollBarThickness = 4,
                 ScrollBarImageColor3 = COLORS.Orange,
                 CanvasSize = UDim2.fromOffset(0, 0),
-                AutomaticCanvasSize = Enum.AutomaticSize.Y,
                 Parent = DropdownList
             })
             
-            CreateElement("UIListLayout", {
+            local ScrollLayout = CreateElement("UIListLayout", {
                 SortOrder = Enum.SortOrder.LayoutOrder,
                 Padding = UDim.new(0, 2),
                 Parent = DropdownScroll
@@ -749,6 +748,10 @@ function MonarchUI:CreateWindow(config)
                 PaddingRight = UDim.new(0, 5),
                 Parent = DropdownScroll
             })
+            
+            ScrollLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                DropdownScroll.CanvasSize = UDim2.new(0, 0, 0, ScrollLayout.AbsoluteContentSize.Y + 10)
+            end)
             
             local opened = false
             
@@ -768,7 +771,7 @@ function MonarchUI:CreateWindow(config)
                 end
             end)
             
-            for _, value in ipairs(config.Values) do
+            local function AddItem(value)
                 local Item = CreateElement("TextButton", {
                     Size = UDim2.new(1, 0, 0, 28),
                     BackgroundColor3 = COLORS.White,
@@ -807,54 +810,24 @@ function MonarchUI:CreateWindow(config)
                 end)
             end
             
-            function Dropdown:Refresh(values)
+            for _, value in ipairs(config.Values) do
+                AddItem(value)
+            end
+            
+            local DropdownObj = {}
+            
+            function DropdownObj:Refresh(values)
                 for _, child in ipairs(DropdownScroll:GetChildren()) do
                     if child:IsA("TextButton") then
                         child:Destroy()
                     end
                 end
-                
                 for _, value in ipairs(values) do
-                    local Item = CreateElement("TextButton", {
-                        Size = UDim2.new(1, 0, 0, 28),
-                        BackgroundColor3 = COLORS.White,
-                        BorderSizePixel = 0,
-                        Text = value,
-                        TextColor3 = COLORS.Black,
-                        TextSize = 13,
-                        Font = Enum.Font.Gotham,
-                        Parent = DropdownScroll
-                    })
-                    
-                    CreateElement("UICorner", {
-                        CornerRadius = UDim.new(0, 6),
-                        Parent = Item
-                    })
-                    
-                    Item.MouseButton1Click:Connect(function()
-                        DropdownValue.Text = value
-                        opened = false
-                        Tween(DropdownList, {Size = UDim2.new(1, 0, 0, 0)}, 0.2)
-                        Tween(DropdownIcon, {Rotation = 0}, 0.2)
-                        task.wait(0.2)
-                        DropdownList.Visible = false
-                        
-                        if config.Callback then
-                            config.Callback(value)
-                        end
-                    end)
-                    
-                    Item.MouseEnter:Connect(function()
-                        Tween(Item, {BackgroundColor3 = COLORS.WarmBg}, 0.1)
-                    end)
-                    
-                    Item.MouseLeave:Connect(function()
-                        Tween(Item, {BackgroundColor3 = COLORS.White}, 0.1)
-                    end)
+                    AddItem(value)
                 end
             end
             
-            return Dropdown
+            return DropdownObj
         end
         
         function Tab:Button(config)
