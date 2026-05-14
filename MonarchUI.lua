@@ -61,6 +61,7 @@ function MonarchUI:CreateWindow(config)
         Position = UDim2.new(0.5, 0, 0.5, 0),
         AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundColor3 = COLORS.Background,
+        BackgroundTransparency = 1,
         BorderSizePixel = 0,
         Parent = ScreenGui
     })
@@ -86,6 +87,14 @@ function MonarchUI:CreateWindow(config)
         Parent = MainFrame
     })
     
+    local Scale = CreateElement("UIScale", {
+        Scale = 0.95,
+        Parent = MainFrame
+    })
+    
+    Tween(MainFrame, {BackgroundTransparency = 0}, 0.3)
+    Tween(Scale, {Scale = 1}, 0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    
     local TopBar = CreateElement("Frame", {
         Name = "TopBar",
         Size = UDim2.new(1, 0, 0, 50),
@@ -107,6 +116,19 @@ function MonarchUI:CreateWindow(config)
         Parent = TopBar
     })
     
+    local AccentBar = CreateElement("Frame", {
+        Size = UDim2.new(1, 0, 0, 3),
+        Position = UDim2.fromOffset(0, 0),
+        BackgroundColor3 = COLORS.Orange,
+        BorderSizePixel = 0,
+        Parent = MainFrame
+    })
+    
+    CreateElement("UICorner", {
+        CornerRadius = UDim.new(0, 3),
+        Parent = AccentBar
+    })
+    
     local Title = CreateElement("TextLabel", {
         Name = "Title",
         Size = UDim2.new(1, -120, 1, 0),
@@ -122,20 +144,15 @@ function MonarchUI:CreateWindow(config)
     
     local CloseButton = CreateElement("TextButton", {
         Name = "Close",
-        Size = UDim2.fromOffset(40, 40),
-        Position = UDim2.new(1, -50, 0.5, -20),
-        BackgroundColor3 = COLORS.GrayLight,
+        Size = UDim2.fromOffset(36, 36),
+        Position = UDim2.new(1, -48, 0.5, -18),
+        BackgroundTransparency = 1,
         BorderSizePixel = 0,
         Text = "×",
         TextColor3 = COLORS.Gray,
-        TextSize = 24,
+        TextSize = 22,
         Font = Enum.Font.GothamBold,
         Parent = TopBar
-    })
-    
-    CreateElement("UICorner", {
-        CornerRadius = UDim.new(0, 8),
-        Parent = CloseButton
     })
     
     CloseButton.MouseButton1Click:Connect(function()
@@ -143,13 +160,11 @@ function MonarchUI:CreateWindow(config)
     end)
     
     CloseButton.MouseEnter:Connect(function()
-        Tween(CloseButton, {BackgroundColor3 = COLORS.Error}, 0.2)
-        Tween(CloseButton, {TextColor3 = COLORS.White}, 0.2)
+        Tween(CloseButton, {TextColor3 = COLORS.Error}, 0.15)
     end)
     
     CloseButton.MouseLeave:Connect(function()
-        Tween(CloseButton, {BackgroundColor3 = COLORS.GrayLight}, 0.2)
-        Tween(CloseButton, {TextColor3 = COLORS.Gray}, 0.2)
+        Tween(CloseButton, {TextColor3 = COLORS.Gray}, 0.15)
     end)
     
     local TabBar = CreateElement("Frame", {
@@ -167,8 +182,9 @@ function MonarchUI:CreateWindow(config)
         Position = UDim2.fromOffset(5, 10),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        ScrollBarThickness = 4,
+        ScrollBarThickness = 3,
         ScrollBarImageColor3 = COLORS.Orange,
+        ScrollBarImageTransparency = 0.6,
         CanvasSize = UDim2.fromOffset(0, 0),
         Parent = TabBar
     })
@@ -253,15 +269,29 @@ function MonarchUI:CreateWindow(config)
             Parent = TabButton
         })
         
-        local TabIcon = CreateElement("TextLabel", {
-            Size = UDim2.fromOffset(20, 20),
-            Position = UDim2.fromOffset(12, 10),
-            BackgroundTransparency = 1,
-            Text = "•",
-            TextColor3 = COLORS.Gray,
-            TextSize = 20,
-            Font = Enum.Font.GothamBold,
+        local tabInitial = config.Title:sub(1, 1):upper()
+        
+        local TabIcon = CreateElement("Frame", {
+            Size = UDim2.fromOffset(26, 26),
+            Position = UDim2.fromOffset(10, 7),
+            BackgroundColor3 = COLORS.GrayLight,
+            BorderSizePixel = 0,
             Parent = TabButton
+        })
+        
+        CreateElement("UICorner", {
+            CornerRadius = UDim.new(1, 0),
+            Parent = TabIcon
+        })
+        
+        local TabIconLabel = CreateElement("TextLabel", {
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            Text = tabInitial,
+            TextColor3 = COLORS.Gray,
+            TextSize = 12,
+            Font = Enum.Font.GothamBold,
+            Parent = TabIcon
         })
         
         local TabLabel = CreateElement("TextLabel", {
@@ -281,8 +311,9 @@ function MonarchUI:CreateWindow(config)
             Size = UDim2.new(1, 0, 1, 0),
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
-            ScrollBarThickness = 6,
+            ScrollBarThickness = 4,
             ScrollBarImageColor3 = COLORS.Orange,
+            ScrollBarImageTransparency = 0.5,
             CanvasSize = UDim2.fromOffset(0, 0),
             Visible = false,
             Parent = ContentFrame
@@ -318,15 +349,22 @@ function MonarchUI:CreateWindow(config)
                     Tween(tab.Label, {TextColor3 = COLORS.Gray}, 0.2)
                 end
                 if tab.Icon and typeof(tab.Icon) == "Instance" then
-                    Tween(tab.Icon, {TextColor3 = COLORS.Gray}, 0.2)
+                    Tween(tab.Icon, {BackgroundColor3 = COLORS.GrayLight}, 0.2)
+                end
+                if tab.IconLabel and typeof(tab.IconLabel) == "Instance" then
+                    Tween(tab.IconLabel, {TextColor3 = COLORS.Gray}, 0.2)
                 end
             end
             if TabContent and typeof(TabContent) == "Instance" then
                 TabContent.Visible = true
+                TabContent.CanvasPosition = Vector2.new(0, 0)
+                TabContent.Position = UDim2.new(0, 0, 0, 6)
+                Tween(TabContent, {Position = UDim2.new(0, 0, 0, 0)}, 0.25)
             end
             Tween(TabButton, {BackgroundColor3 = COLORS.Orange}, 0.2)
             Tween(TabLabel, {TextColor3 = COLORS.White}, 0.2)
-            Tween(TabIcon, {TextColor3 = COLORS.White}, 0.2)
+            Tween(TabIcon, {BackgroundColor3 = COLORS.Orange}, 0.2)
+            Tween(TabIconLabel, {TextColor3 = COLORS.White}, 0.2)
             Window.CurrentTab = Tab
         end
 
@@ -347,6 +385,7 @@ function MonarchUI:CreateWindow(config)
         Tab.Button = TabButton
         Tab.Label = TabLabel
         Tab.Icon = TabIcon
+        Tab.IconLabel = TabIconLabel
         Tab.Content = TabContent
         
         table.insert(Window.Tabs, Tab)
@@ -358,32 +397,39 @@ function MonarchUI:CreateWindow(config)
         function Tab:Section(config)
             local Section = CreateElement("Frame", {
                 Name = "Section",
-                Size = UDim2.new(1, 0, 0, 35),
-                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 42),
+                BackgroundColor3 = COLORS.WarmBg,
+                BorderSizePixel = 0,
                 Parent = TabContent
             })
             
-            local SectionLabel = CreateElement("TextLabel", {
-                Size = UDim2.new(1, 0, 1, 0),
-                BackgroundTransparency = 1,
-                Text = config.Title,
-                TextColor3 = COLORS.Black,
-                TextSize = 16,
-                Font = Enum.Font.GothamBold,
-                TextXAlignment = Enum.TextXAlignment.Left,
+            CreateElement("UICorner", {
+                CornerRadius = UDim.new(0, 8),
                 Parent = Section
             })
             
-            CreateElement("UIPadding", {
-                PaddingLeft = UDim.new(0, 5),
-                Parent = SectionLabel
+            local SectionAccent = CreateElement("Frame", {
+                Size = UDim2.new(0, 4, 0.5, 0),
+                Position = UDim2.fromOffset(0, 10),
+                BackgroundColor3 = COLORS.Orange,
+                BorderSizePixel = 0,
+                Parent = Section
             })
             
-            local Divider = CreateElement("Frame", {
-                Size = UDim2.new(1, 0, 0, 2),
-                Position = UDim2.new(0, 0, 1, -2),
-                BackgroundColor3 = COLORS.GrayBorder,
-                BorderSizePixel = 0,
+            CreateElement("UICorner", {
+                CornerRadius = UDim.new(1, 0),
+                Parent = SectionAccent
+            })
+            
+            local SectionLabel = CreateElement("TextLabel", {
+                Size = UDim2.new(1, -20, 1, 0),
+                Position = UDim2.fromOffset(14, 0),
+                BackgroundTransparency = 1,
+                Text = config.Title,
+                TextColor3 = COLORS.Black,
+                TextSize = 15,
+                Font = Enum.Font.GothamBold,
+                TextXAlignment = Enum.TextXAlignment.Left,
                 Parent = Section
             })
             
@@ -730,8 +776,9 @@ function MonarchUI:CreateWindow(config)
                 Size = UDim2.new(1, 0, 1, 0),
                 BackgroundTransparency = 1,
                 BorderSizePixel = 0,
-                ScrollBarThickness = 4,
+                ScrollBarThickness = 3,
                 ScrollBarImageColor3 = COLORS.Orange,
+                ScrollBarImageTransparency = 0.6,
                 CanvasSize = UDim2.fromOffset(0, 0),
                 Parent = DropdownList
             })
@@ -760,10 +807,19 @@ function MonarchUI:CreateWindow(config)
                 opened = not opened
                 
                 if opened then
-                    DropdownList.Visible = true
                     local itemCount = math.min(#config.Values, 5)
-                    Tween(DropdownList, {Size = UDim2.new(1, 0, 0, itemCount * 32 + 10)}, 0.2)
-                    Tween(DropdownIcon, {Rotation = 180}, 0.2)
+                    local listHeight = itemCount * 32 + 10
+                    local absPos = DropdownFrame.AbsolutePosition
+                    local absY = absPos.Y + DropdownFrame.AbsoluteSize.Y + 5
+                    local screenHeight = workspace.CurrentCamera.ViewportSize.Y
+                    local opensUp = absY + listHeight > screenHeight
+                    
+                    DropdownList.Position = opensUp 
+                        and UDim2.new(0, 0, 0, -listHeight - 5) 
+                        or UDim2.new(0, 0, 1, 5)
+                    DropdownList.Visible = true
+                    Tween(DropdownList, {Size = UDim2.new(1, 0, 0, listHeight)}, 0.2)
+                    Tween(DropdownIcon, {Rotation = opensUp and -180 or 180}, 0.2)
                 else
                     Tween(DropdownList, {Size = UDim2.new(1, 0, 0, 0)}, 0.2)
                     Tween(DropdownIcon, {Rotation = 0}, 0.2)
@@ -884,7 +940,7 @@ function MonarchUI:CreateWindow(config)
                 Parent = Input
             })
             
-            CreateElement("UIStroke", {
+            local InputStroke = CreateElement("UIStroke", {
                 Color = COLORS.GrayBorder,
                 Thickness = 1,
                 Parent = Input
@@ -917,7 +973,12 @@ function MonarchUI:CreateWindow(config)
                 Parent = Input
             })
             
+            InputBox.Focused:Connect(function()
+                InputStroke.Color = COLORS.Orange
+            end)
+            
             InputBox.FocusLost:Connect(function(enterPressed)
+                InputStroke.Color = COLORS.GrayBorder
                 if enterPressed and config.Callback then
                     config.Callback(InputBox.Text)
                     InputBox.Text = ""
@@ -1199,7 +1260,21 @@ function MonarchUI:CreateWindow(config)
     
     function Window:Toggle()
         Window.Visible = not Window.Visible
-        MainFrame.Visible = Window.Visible
+        if Window.Visible then
+            MainFrame.Visible = true
+            MainFrame.BackgroundTransparency = 1
+            Scale.Scale = 0.95
+            Tween(MainFrame, {BackgroundTransparency = 0}, 0.2)
+            Tween(Scale, {Scale = 1}, 0.25)
+        else
+            Tween(MainFrame, {BackgroundTransparency = 1}, 0.2)
+            Tween(Scale, {Scale = 0.95}, 0.2)
+            task.delay(0.25, function()
+                if not Window.Visible then
+                    MainFrame.Visible = false
+                end
+            end)
+        end
     end
     
     function Window:SetToggleKey(key)
@@ -1215,7 +1290,7 @@ function MonarchUI:CreateWindow(config)
     end
     
     function Window:Notify(config)
-        Window.NotifOffset = Window.NotifOffset or 0
+        Window.NotifQueue = Window.NotifQueue or {}
         
         local Notification = CreateElement("Frame", {
             Size = UDim2.fromOffset(300, 0),
@@ -1271,13 +1346,21 @@ function MonarchUI:CreateWindow(config)
         
         local notifHeight = 50 + textBounds.Y
         NotifContent.Size = UDim2.new(1, -20, 0, textBounds.Y)
-        
         Notification.Size = UDim2.fromOffset(300, notifHeight)
         
-        local offset = Window.NotifOffset
-        Window.NotifOffset = Window.NotifOffset + notifHeight + 12
+        local function updatePositions()
+            local offset = 0
+            for _, notif in ipairs(Window.NotifQueue) do
+                if notif.Frame and notif.Frame.Parent then
+                    Tween(notif.Frame, {Position = UDim2.new(1, -320, 1, -notif.Height - 20 - offset)}, 0.25)
+                    offset = offset + notif.Height + 12
+                end
+            end
+        end
         
-        Tween(Notification, {Position = UDim2.new(1, -320, 1, -notifHeight - 20 - offset)}, 0.3, Enum.EasingStyle.Back)
+        local notifObj = {Frame = Notification, Height = notifHeight}
+        table.insert(Window.NotifQueue, 1, notifObj)
+        updatePositions()
         
         task.delay(config.Duration or 3, function()
             if Notification and Notification.Parent then
@@ -1287,6 +1370,13 @@ function MonarchUI:CreateWindow(config)
                     Notification:Destroy()
                 end
             end
+            for i, v in ipairs(Window.NotifQueue) do
+                if v == notifObj then
+                    table.remove(Window.NotifQueue, i)
+                    break
+                end
+            end
+            updatePositions()
         end)
     end
     
