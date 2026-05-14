@@ -19,6 +19,15 @@ local COLORS = {
     Background = Color3.fromRGB(255, 255, 255),
 }
 
+local TAB_ICONS = {
+    ["Aimbot"] = "\u{2316}",
+    ["ESP"] = "\u{229E}",
+    ["Movement"] = "\u{2197}",
+    ["Gun Mods"] = "\u{2726}",
+    ["Misc"] = "\u{2630}",
+    ["Settings"] = "\u{2699}",
+}
+
 local function CreateElement(className, properties)
     local element = Instance.new(className)
     for prop, value in pairs(properties) do
@@ -129,10 +138,33 @@ function MonarchUI:CreateWindow(config)
         Parent = AccentBar
     })
     
+    local TitleBadge = CreateElement("Frame", {
+        Size = UDim2.fromOffset(28, 28),
+        Position = UDim2.fromOffset(18, 11),
+        BackgroundColor3 = COLORS.Orange,
+        BorderSizePixel = 0,
+        Parent = TopBar
+    })
+    
+    CreateElement("UICorner", {
+        CornerRadius = UDim.new(1, 0),
+        Parent = TitleBadge
+    })
+    
+    local TitleBadgeLabel = CreateElement("TextLabel", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = "M",
+        TextColor3 = COLORS.White,
+        TextSize = 14,
+        Font = Enum.Font.GothamBold,
+        Parent = TitleBadge
+    })
+    
     local Title = CreateElement("TextLabel", {
         Name = "Title",
         Size = UDim2.new(1, -120, 1, 0),
-        Position = UDim2.fromOffset(20, 0),
+        Position = UDim2.fromOffset(54, 0),
         BackgroundTransparency = 1,
         Text = config.Title or "MonarchHub",
         TextColor3 = COLORS.Black,
@@ -256,7 +288,7 @@ function MonarchUI:CreateWindow(config)
         
         local TabButton = CreateElement("TextButton", {
             Name = config.Title,
-            Size = UDim2.new(1, 0, 0, 40),
+            Size = UDim2.new(1, 0, 0, 44),
             BackgroundColor3 = COLORS.White,
             BorderSizePixel = 0,
             Text = "",
@@ -265,15 +297,27 @@ function MonarchUI:CreateWindow(config)
         })
         
         CreateElement("UICorner", {
-            CornerRadius = UDim.new(0, 8),
+            CornerRadius = UDim.new(0, 10),
             Parent = TabButton
         })
         
-        local tabInitial = config.Title:sub(1, 1):upper()
+        local ActiveIndicator = CreateElement("Frame", {
+            Size = UDim2.new(0, 3, 0, 18),
+            Position = UDim2.new(0, 0, 0.5, -9),
+            BackgroundColor3 = COLORS.Orange,
+            BorderSizePixel = 0,
+            BackgroundTransparency = 1,
+            Parent = TabButton
+        })
         
-        local TabIcon = CreateElement("Frame", {
-            Size = UDim2.fromOffset(26, 26),
-            Position = UDim2.fromOffset(10, 7),
+        CreateElement("UICorner", {
+            CornerRadius = UDim.new(1, 0),
+            Parent = ActiveIndicator
+        })
+        
+        local TabIconCircle = CreateElement("Frame", {
+            Size = UDim2.fromOffset(28, 28),
+            Position = UDim2.fromOffset(12, 8),
             BackgroundColor3 = COLORS.GrayLight,
             BorderSizePixel = 0,
             Parent = TabButton
@@ -281,22 +325,24 @@ function MonarchUI:CreateWindow(config)
         
         CreateElement("UICorner", {
             CornerRadius = UDim.new(1, 0),
-            Parent = TabIcon
+            Parent = TabIconCircle
         })
+        
+        local iconSymbol = TAB_ICONS[config.Title] or config.Title:sub(1, 1):upper()
         
         local TabIconLabel = CreateElement("TextLabel", {
             Size = UDim2.new(1, 0, 1, 0),
             BackgroundTransparency = 1,
-            Text = tabInitial,
+            Text = iconSymbol,
             TextColor3 = COLORS.Gray,
-            TextSize = 12,
+            TextSize = 14,
             Font = Enum.Font.GothamBold,
-            Parent = TabIcon
+            Parent = TabIconCircle
         })
         
         local TabLabel = CreateElement("TextLabel", {
-            Size = UDim2.new(1, -45, 1, 0),
-            Position = UDim2.fromOffset(40, 0),
+            Size = UDim2.new(1, -52, 1, 0),
+            Position = UDim2.fromOffset(48, 0),
             BackgroundTransparency = 1,
             Text = config.Title,
             TextColor3 = COLORS.Gray,
@@ -348,11 +394,14 @@ function MonarchUI:CreateWindow(config)
                 if tab.Label and typeof(tab.Label) == "Instance" then
                     Tween(tab.Label, {TextColor3 = COLORS.Gray}, 0.2)
                 end
-                if tab.Icon and typeof(tab.Icon) == "Instance" then
-                    Tween(tab.Icon, {BackgroundColor3 = COLORS.GrayLight}, 0.2)
+                if tab.IconCircle and typeof(tab.IconCircle) == "Instance" then
+                    Tween(tab.IconCircle, {BackgroundColor3 = COLORS.GrayLight}, 0.2)
                 end
                 if tab.IconLabel and typeof(tab.IconLabel) == "Instance" then
                     Tween(tab.IconLabel, {TextColor3 = COLORS.Gray}, 0.2)
+                end
+                if tab.ActiveIndicator and typeof(tab.ActiveIndicator) == "Instance" then
+                    Tween(tab.ActiveIndicator, {BackgroundTransparency = 1}, 0.15)
                 end
             end
             if TabContent and typeof(TabContent) == "Instance" then
@@ -363,8 +412,10 @@ function MonarchUI:CreateWindow(config)
             end
             Tween(TabButton, {BackgroundColor3 = COLORS.Orange}, 0.2)
             Tween(TabLabel, {TextColor3 = COLORS.White}, 0.2)
-            Tween(TabIcon, {BackgroundColor3 = COLORS.Orange}, 0.2)
+            Tween(TabIconCircle, {BackgroundColor3 = COLORS.Orange}, 0.2)
             Tween(TabIconLabel, {TextColor3 = COLORS.White}, 0.2)
+            ActiveIndicator.BackgroundTransparency = 0
+            Tween(ActiveIndicator, {BackgroundTransparency = 0}, 0.15)
             Window.CurrentTab = Tab
         end
 
@@ -372,20 +423,25 @@ function MonarchUI:CreateWindow(config)
         
         TabButton.MouseEnter:Connect(function()
             if Window.CurrentTab ~= Tab then
-                Tween(TabButton, {BackgroundColor3 = COLORS.GrayLight}, 0.2)
+                Tween(TabButton, {BackgroundColor3 = COLORS.GrayLight}, 0.15)
+                Tween(TabLabel, {TextColor3 = COLORS.Black}, 0.15)
+                Tween(TabIconLabel, {TextColor3 = COLORS.Black}, 0.15)
             end
         end)
         
         TabButton.MouseLeave:Connect(function()
             if Window.CurrentTab ~= Tab then
-                Tween(TabButton, {BackgroundColor3 = COLORS.White}, 0.2)
+                Tween(TabButton, {BackgroundColor3 = COLORS.White}, 0.15)
+                Tween(TabLabel, {TextColor3 = COLORS.Gray}, 0.15)
+                Tween(TabIconLabel, {TextColor3 = COLORS.Gray}, 0.15)
             end
         end)
         
         Tab.Button = TabButton
         Tab.Label = TabLabel
-        Tab.Icon = TabIcon
+        Tab.IconCircle = TabIconCircle
         Tab.IconLabel = TabIconLabel
+        Tab.ActiveIndicator = ActiveIndicator
         Tab.Content = TabContent
         
         table.insert(Window.Tabs, Tab)
@@ -509,6 +565,17 @@ function MonarchUI:CreateWindow(config)
                 Parent = ToggleCircle
             })
             
+            local ToggleCheck = CreateElement("TextLabel", {
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1,
+                Text = "\u{2713}",
+                TextColor3 = COLORS.Orange,
+                TextSize = 12,
+                Font = Enum.Font.GothamBold,
+                Parent = ToggleCircle
+            })
+            ToggleCheck.TextTransparency = config.Value and 0 or 1
+            
             local toggled = config.Value or false
             
             ToggleButton.MouseButton1Click:Connect(function()
@@ -517,9 +584,11 @@ function MonarchUI:CreateWindow(config)
                 if toggled then
                     Tween(ToggleButton, {BackgroundColor3 = COLORS.Orange}, 0.2)
                     Tween(ToggleCircle, {Position = UDim2.new(1, -22, 0.5, -9.5)}, 0.2)
+                    Tween(ToggleCheck, {TextTransparency = 0}, 0.15)
                 else
                     Tween(ToggleButton, {BackgroundColor3 = COLORS.GrayLight}, 0.2)
                     Tween(ToggleCircle, {Position = UDim2.fromOffset(3, 3)}, 0.2)
+                    Tween(ToggleCheck, {TextTransparency = 1}, 0.15)
                 end
                 
                 if config.Callback then
@@ -888,16 +957,22 @@ function MonarchUI:CreateWindow(config)
         end
         
         function Tab:Button(config)
-            local Button = CreateElement("TextButton", {
+            local ButtonContainer = CreateElement("Frame", {
                 Name = "Button",
                 Size = UDim2.new(1, 0, 0, 40),
+                BackgroundTransparency = 1,
+                Parent = TabContent
+            })
+            
+            local Button = CreateElement("TextButton", {
+                Size = UDim2.new(1, 0, 1, 0),
                 BackgroundColor3 = COLORS.Orange,
                 BorderSizePixel = 0,
                 Text = config.Title,
                 TextColor3 = COLORS.White,
                 TextSize = 14,
                 Font = Enum.Font.GothamMedium,
-                Parent = TabContent
+                Parent = ButtonContainer
             })
             
             CreateElement("UICorner", {
@@ -905,11 +980,20 @@ function MonarchUI:CreateWindow(config)
                 Parent = Button
             })
             
+            local ButtonScale = CreateElement("UIScale", {
+                Scale = 1,
+                Parent = Button
+            })
+            
+            Button.MouseButton1Down:Connect(function()
+                Tween(ButtonScale, {Scale = 0.97}, 0.1)
+            end)
+            
+            Button.MouseButton1Up:Connect(function()
+                Tween(ButtonScale, {Scale = 1}, 0.15)
+            end)
+            
             Button.MouseButton1Click:Connect(function()
-                Tween(Button, {BackgroundColor3 = COLORS.OrangeHover}, 0.1)
-                task.wait(0.1)
-                Tween(Button, {BackgroundColor3 = COLORS.Orange}, 0.1)
-                
                 if config.Callback then
                     config.Callback()
                 end
@@ -921,9 +1005,10 @@ function MonarchUI:CreateWindow(config)
             
             Button.MouseLeave:Connect(function()
                 Tween(Button, {BackgroundColor3 = COLORS.Orange}, 0.2)
+                Tween(ButtonScale, {Scale = 1}, 0.15)
             end)
             
-            return Button
+            return ButtonContainer
         end
         
         function Tab:Input(config)
