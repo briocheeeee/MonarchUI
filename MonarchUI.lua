@@ -165,11 +165,10 @@ function MonarchUI:CreateWindow(config)
         ScrollBarThickness = 4,
         ScrollBarImageColor3 = COLORS.Orange,
         CanvasSize = UDim2.fromOffset(0, 0),
-        AutomaticCanvasSize = Enum.AutomaticSize.Y,
         Parent = TabBar
     })
     
-    CreateElement("UIListLayout", {
+    local TabListLayout = CreateElement("UIListLayout", {
         SortOrder = Enum.SortOrder.LayoutOrder,
         Padding = UDim.new(0, 6),
         Parent = TabList
@@ -180,6 +179,10 @@ function MonarchUI:CreateWindow(config)
         PaddingRight = UDim.new(0, 5),
         Parent = TabList
     })
+    
+    TabListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        TabList.CanvasSize = UDim2.new(0, 0, 0, TabListLayout.AbsoluteContentSize.Y + 10)
+    end)
     
     local ContentFrame = CreateElement("Frame", {
         Name = "Content",
@@ -278,12 +281,11 @@ function MonarchUI:CreateWindow(config)
             ScrollBarThickness = 6,
             ScrollBarImageColor3 = COLORS.Orange,
             CanvasSize = UDim2.fromOffset(0, 0),
-            AutomaticCanvasSize = Enum.AutomaticSize.Y,
             Visible = false,
             Parent = ContentFrame
         })
         
-        CreateElement("UIListLayout", {
+        local ContentLayout = CreateElement("UIListLayout", {
             SortOrder = Enum.SortOrder.LayoutOrder,
             Padding = UDim.new(0, 12),
             Parent = TabContent
@@ -296,6 +298,10 @@ function MonarchUI:CreateWindow(config)
             PaddingRight = UDim.new(0, 10),
             Parent = TabContent
         })
+        
+        ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            TabContent.CanvasSize = UDim2.new(0, 0, 0, ContentLayout.AbsoluteContentSize.Y + 20)
+        end)
         
         TabButton.MouseButton1Click:Connect(function()
             for _, tab in pairs(Window.Tabs) do
