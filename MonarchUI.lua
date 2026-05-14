@@ -303,20 +303,21 @@ function MonarchUI:CreateWindow(config)
             TabContent.CanvasSize = UDim2.new(0, 0, 0, ContentLayout.AbsoluteContentSize.Y + 20)
         end)
         
-        TabButton.MouseButton1Click:Connect(function()
+        local function ActivateTab()
             for _, tab in pairs(Window.Tabs) do
                 tab.Content.Visible = false
                 Tween(tab.Button, {BackgroundColor3 = COLORS.White}, 0.2)
                 Tween(tab.Label, {TextColor3 = COLORS.Gray}, 0.2)
                 Tween(tab.Icon, {TextColor3 = COLORS.Gray}, 0.2)
             end
-            
             TabContent.Visible = true
             Tween(TabButton, {BackgroundColor3 = COLORS.Orange}, 0.2)
             Tween(TabLabel, {TextColor3 = COLORS.White}, 0.2)
             Tween(TabIcon, {TextColor3 = COLORS.White}, 0.2)
             Window.CurrentTab = Tab
-        end)
+        end
+
+        TabButton.MouseButton1Click:Connect(ActivateTab)
         
         TabButton.MouseEnter:Connect(function()
             if Window.CurrentTab ~= Tab then
@@ -338,7 +339,7 @@ function MonarchUI:CreateWindow(config)
         table.insert(Window.Tabs, Tab)
         
         if #Window.Tabs == 1 then
-            TabButton.MouseButton1Click:Fire()
+            ActivateTab()
         end
         
         function Tab:Section(config)
