@@ -63,6 +63,7 @@ function MonarchUI:CreateWindow(config)
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
         Parent = game:GetService("CoreGui") or game.Players.LocalPlayer.PlayerGui
     })
+    Window.ScreenGui = ScreenGui
     
     local MainFrame = CreateElement("Frame", {
         Name = "Main",
@@ -74,6 +75,7 @@ function MonarchUI:CreateWindow(config)
         BorderSizePixel = 0,
         Parent = ScreenGui
     })
+    Window.MainFrame = MainFrame
     
     local Shadow = CreateElement("Frame", {
         Name = "Shadow",
@@ -645,8 +647,9 @@ function MonarchUI:CreateWindow(config)
             local step = config.Step or 1
             
             local SliderValue = CreateElement("TextLabel", {
-                Size = UDim2.new(0.3, 0, 0, 20),
+                Size = UDim2.new(0.22, 0, 0, 20),
                 Position = UDim2.new(1, -15, 0, 8),
+                AnchorPoint = Vector2.new(1, 0),
                 BackgroundTransparency = 1,
                 Text = tostring(default),
                 TextColor3 = COLORS.Orange,
@@ -821,13 +824,13 @@ function MonarchUI:CreateWindow(config)
             })
             
             local DropdownList = CreateElement("Frame", {
-                Size = UDim2.new(1, 0, 0, 0),
-                Position = UDim2.new(0, 0, 1, 5),
+                Size = UDim2.fromOffset(0, 0),
+                Position = UDim2.fromOffset(0, 0),
                 BackgroundColor3 = COLORS.White,
                 BorderSizePixel = 0,
                 Visible = false,
-                ZIndex = 10,
-                Parent = DropdownFrame
+                ZIndex = 100,
+                Parent = Window.ScreenGui
             })
             
             CreateElement("UICorner", {
@@ -879,18 +882,24 @@ function MonarchUI:CreateWindow(config)
                     local itemCount = math.min(#config.Values, 5)
                     local listHeight = itemCount * 32 + 10
                     local absPos = DropdownFrame.AbsolutePosition
-                    local absY = absPos.Y + DropdownFrame.AbsoluteSize.Y + 5
+                    local absSize = DropdownFrame.AbsoluteSize
+                    local listWidth = absSize.X
+                    local listPosY = absPos.Y + absSize.Y + 5
                     local screenHeight = workspace.CurrentCamera.ViewportSize.Y
-                    local opensUp = absY + listHeight > screenHeight
+                    local opensUp = listPosY + listHeight > screenHeight
                     
-                    DropdownList.Position = opensUp 
-                        and UDim2.new(0, 0, 0, -listHeight - 5) 
-                        or UDim2.new(0, 0, 1, 5)
+                    if opensUp then
+                        listPosY = absPos.Y - listHeight - 5
+                    end
+                    
+                    DropdownList.Position = UDim2.fromOffset(absPos.X, listPosY)
+                    DropdownList.Size = UDim2.fromOffset(listWidth, 0)
                     DropdownList.Visible = true
-                    Tween(DropdownList, {Size = UDim2.new(1, 0, 0, listHeight)}, 0.2)
+                    Tween(DropdownList, {Size = UDim2.fromOffset(listWidth, listHeight)}, 0.2)
                     Tween(DropdownIcon, {Rotation = opensUp and -180 or 180}, 0.2)
                 else
-                    Tween(DropdownList, {Size = UDim2.new(1, 0, 0, 0)}, 0.2)
+                    local absSize = DropdownFrame.AbsoluteSize
+                    Tween(DropdownList, {Size = UDim2.fromOffset(absSize.X, 0)}, 0.2)
                     Tween(DropdownIcon, {Rotation = 0}, 0.2)
                     task.wait(0.2)
                     DropdownList.Visible = false
@@ -1159,13 +1168,18 @@ function MonarchUI:CreateWindow(config)
                     return
                 end
                 
+                local absPos = Colorpicker.AbsolutePosition
+                local absSize = Colorpicker.AbsoluteSize
+                local paletteX = absPos.X + absSize.X - 205
+                local paletteY = absPos.Y + absSize.Y + 5
+                
                 PaletteFrame = CreateElement("Frame", {
-                    Size = UDim2.new(0, 200, 0, 110),
-                    Position = UDim2.new(1, -205, 1, 5),
+                    Size = UDim2.fromOffset(200, 110),
+                    Position = UDim2.fromOffset(paletteX, paletteY),
                     BackgroundColor3 = COLORS.White,
                     BorderSizePixel = 0,
-                    ZIndex = 50,
-                    Parent = Colorpicker
+                    ZIndex = 100,
+                    Parent = Window.ScreenGui
                 })
                 
                 CreateElement("UICorner", {
