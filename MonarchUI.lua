@@ -630,7 +630,7 @@ function MonarchUI:CreateWindow(config)
             })
             
             local SliderLabel = CreateElement("TextLabel", {
-                Size = UDim2.new(0.6, 0, 0, 20),
+                Size = UDim2.new(1, -90, 0, 20),
                 Position = UDim2.fromOffset(15, 8),
                 BackgroundTransparency = 1,
                 Text = config.Title,
@@ -638,6 +638,7 @@ function MonarchUI:CreateWindow(config)
                 TextSize = 14,
                 Font = Enum.Font.GothamMedium,
                 TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
                 Parent = Slider
             })
             
@@ -647,7 +648,7 @@ function MonarchUI:CreateWindow(config)
             local step = config.Step or 1
             
             local SliderValue = CreateElement("TextLabel", {
-                Size = UDim2.new(0.22, 0, 0, 20),
+                Size = UDim2.new(0, 60, 0, 20),
                 Position = UDim2.new(1, -15, 0, 8),
                 AnchorPoint = Vector2.new(1, 0),
                 BackgroundTransparency = 1,
@@ -721,9 +722,10 @@ function MonarchUI:CreateWindow(config)
             local dragging = false
             
             local function updateSlider(input)
-                local pos = math.clamp((input.Position.X - SliderTrack.AbsolutePosition.X) / SliderTrack.AbsoluteSize.X, 0, 1)
+                local pos = (input.Position.X - SliderTrack.AbsolutePosition.X) / SliderTrack.AbsoluteSize.X
+                if pos < 0 then pos = 0 elseif pos > 1 then pos = 1 end
                 local value = math.floor((min + (max - min) * pos) / step + 0.5) * step
-                value = math.clamp(value, min, max)
+                if value < min then value = min elseif value > max then value = max end
                 
                 SliderValue.Text = tostring(value)
                 SliderFill.Size = UDim2.new(pos, 0, 1, 0)
@@ -874,6 +876,21 @@ function MonarchUI:CreateWindow(config)
             end)
             
             local opened = false
+            local dropdownCloseConn = nil
+            
+            local function closeDropdown()
+                if not opened then return end
+                opened = false
+                local absSize = DropdownFrame.AbsoluteSize
+                Tween(DropdownList, {Size = UDim2.fromOffset(absSize.X, 0)}, 0.2)
+                Tween(DropdownIcon, {Rotation = 0}, 0.2)
+                task.wait(0.2)
+                DropdownList.Visible = false
+                if dropdownCloseConn then
+                    dropdownCloseConn:Disconnect()
+                    dropdownCloseConn = nil
+                end
+            end
             
             DropdownButton.MouseButton1Click:Connect(function()
                 opened = not opened
@@ -885,24 +902,40 @@ function MonarchUI:CreateWindow(config)
                     local absSize = DropdownFrame.AbsoluteSize
                     local listWidth = absSize.X
                     local listPosY = absPos.Y + absSize.Y + 5
-                    local screenHeight = workspace.CurrentCamera.ViewportSize.Y
+                    local cam = workspace.CurrentCamera
+                    local screenHeight = cam and cam.ViewportSize.Y or 1080
                     local opensUp = listPosY + listHeight > screenHeight
                     
                     if opensUp then
                         listPosY = absPos.Y - listHeight - 5
                     end
+                    if listPosY < 0 then listPosY = 5 end
                     
                     DropdownList.Position = UDim2.fromOffset(absPos.X, listPosY)
                     DropdownList.Size = UDim2.fromOffset(listWidth, 0)
                     DropdownList.Visible = true
                     Tween(DropdownList, {Size = UDim2.fromOffset(listWidth, listHeight)}, 0.2)
                     Tween(DropdownIcon, {Rotation = opensUp and -180 or 180}, 0.2)
+                    
+                    dropdownCloseConn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+                        if not opened then return end
+                        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                            local mousePos = UserInputService:GetMouseLocation()
+                            local listPos = DropdownList.AbsolutePosition
+                            local listSize = DropdownList.AbsoluteSize
+                            local inList = mousePos.X >= listPos.X and mousePos.X <= listPos.X + listSize.X
+                                and mousePos.Y >= listPos.Y and mousePos.Y <= listPos.Y + listSize.Y
+                            local dropPos = DropdownFrame.AbsolutePosition
+                            local dropSize = DropdownFrame.AbsoluteSize
+                            local inDropdown = mousePos.X >= dropPos.X and mousePos.X <= dropPos.X + dropSize.X
+                                and mousePos.Y >= dropPos.Y and mousePos.Y <= dropPos.Y + dropSize.Y
+                            if not inList and not inDropdown then
+                                closeDropdown()
+                            end
+                        end
+                    end)
                 else
-                    local absSize = DropdownFrame.AbsoluteSize
-                    Tween(DropdownList, {Size = UDim2.fromOffset(absSize.X, 0)}, 0.2)
-                    Tween(DropdownIcon, {Rotation = 0}, 0.2)
-                    task.wait(0.2)
-                    DropdownList.Visible = false
+                    closeDropdown()
                 end
             end)
             
@@ -925,15 +958,10 @@ function MonarchUI:CreateWindow(config)
                 
                 Item.MouseButton1Click:Connect(function()
                     DropdownValue.Text = value
-                    opened = false
-                    Tween(DropdownList, {Size = UDim2.new(1, 0, 0, 0)}, 0.2)
-                    Tween(DropdownIcon, {Rotation = 0}, 0.2)
-                    task.wait(0.2)
-                    DropdownList.Visible = false
-                    
                     if config.Callback then
                         config.Callback(value)
                     end
+                    closeDropdown()
                 end)
                 
                 Item.MouseEnter:Connect(function()
@@ -1161,20 +1189,42 @@ function MonarchUI:CreateWindow(config)
                 Color3.fromRGB(64, 224, 208),
             }
             
+            local paletteCloseConn = nil
+            
+            local function closePalette()
+                if PaletteFrame then
+                    PaletteFrame:Destroy()
+                    PaletteFrame = nil
+                end
+                PaletteOpen = false
+                if paletteCloseConn then
+                    paletteCloseConn:Disconnect()
+                    paletteCloseConn = nil
+                end
+            end
+            
             ColorPreview.MouseButton1Click:Connect(function()
                 if PaletteOpen and PaletteFrame then
-                    PaletteFrame:Destroy()
-                    PaletteOpen = false
+                    closePalette()
                     return
                 end
                 
                 local absPos = Colorpicker.AbsolutePosition
                 local absSize = Colorpicker.AbsoluteSize
-                local paletteX = absPos.X + absSize.X - 205
+                local paletteW = 200
+                local paletteH = 110
+                local paletteX = absPos.X + absSize.X - paletteW
                 local paletteY = absPos.Y + absSize.Y + 5
+                local cam = workspace.CurrentCamera
+                local vpSize = cam and cam.ViewportSize or Vector2.new(1920, 1080)
+                
+                if paletteX < 5 then paletteX = 5 end
+                if paletteX + paletteW > vpSize.X - 5 then paletteX = vpSize.X - paletteW - 5 end
+                if paletteY + paletteH > vpSize.Y - 5 then paletteY = absPos.Y - paletteH - 5 end
+                if paletteY < 5 then paletteY = 5 end
                 
                 PaletteFrame = CreateElement("Frame", {
-                    Size = UDim2.fromOffset(200, 110),
+                    Size = UDim2.fromOffset(paletteW, paletteH),
                     Position = UDim2.fromOffset(paletteX, paletteY),
                     BackgroundColor3 = COLORS.White,
                     BorderSizePixel = 0,
@@ -1227,13 +1277,30 @@ function MonarchUI:CreateWindow(config)
                     Swatch.MouseButton1Click:Connect(function()
                         currentColor = color
                         ColorPreview.BackgroundColor3 = currentColor
-                        PaletteFrame:Destroy()
-                        PaletteOpen = false
                         if config.Callback then
                             config.Callback(currentColor)
                         end
+                        closePalette()
                     end)
                 end
+                
+                paletteCloseConn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+                    if not PaletteOpen then return end
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        local mousePos = UserInputService:GetMouseLocation()
+                        local palPos = PaletteFrame.AbsolutePosition
+                        local palSize = PaletteFrame.AbsoluteSize
+                        local inPalette = mousePos.X >= palPos.X and mousePos.X <= palPos.X + palSize.X
+                            and mousePos.Y >= palPos.Y and mousePos.Y <= palPos.Y + palSize.Y
+                        local cpPos = Colorpicker.AbsolutePosition
+                        local cpSize = Colorpicker.AbsoluteSize
+                        local inPreview = mousePos.X >= cpPos.X and mousePos.X <= cpPos.X + cpSize.X
+                            and mousePos.Y >= cpPos.Y and mousePos.Y <= cpPos.Y + cpSize.Y
+                        if not inPalette and not inPreview then
+                            closePalette()
+                        end
+                    end
+                end)
                 
                 PaletteOpen = true
             end)
@@ -1376,8 +1443,14 @@ function MonarchUI:CreateWindow(config)
         end
     end
     
+    local toggleKeyConnection = nil
+    
     function Window:SetToggleKey(key)
-        UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if toggleKeyConnection then
+            toggleKeyConnection:Disconnect()
+            toggleKeyConnection = nil
+        end
+        toggleKeyConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if not gameProcessed and input.KeyCode == key then
                 Window:Toggle()
             end
@@ -1393,7 +1466,7 @@ function MonarchUI:CreateWindow(config)
         
         local Notification = CreateElement("Frame", {
             Size = UDim2.fromOffset(300, 0),
-            Position = UDim2.new(1, -320, 1, 20),
+            Position = UDim2.new(1, -320, 1, 120),
             BackgroundColor3 = COLORS.White,
             BorderSizePixel = 0,
             Parent = ScreenGui
