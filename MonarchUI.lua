@@ -51,6 +51,15 @@ local function Tween(object, properties, duration, style, direction)
     return nil
 end
 
+local function FormatNumber(n)
+    if n >= 1000000 then
+        return string.format("%.1fM", n / 1000000)
+    elseif n >= 1000 then
+        return string.format("%.1fk", n / 1000)
+    end
+    return tostring(math.floor(n * 100 + 0.5) / 100)
+end
+
 function MonarchUI:CreateWindow(config)
     local Window = {}
     Window.Tabs = {}
@@ -65,10 +74,15 @@ function MonarchUI:CreateWindow(config)
     })
     Window.ScreenGui = ScreenGui
     
+    local savedX = ScreenGui:GetAttribute("WindowPosX")
+    local savedY = ScreenGui:GetAttribute("WindowPosY")
+    local startX = savedX ~= nil and savedX or 0
+    local startY = savedY ~= nil and savedY or 0
+    
     local MainFrame = CreateElement("Frame", {
         Name = "Main",
         Size = config.Size or UDim2.fromOffset(620, 500),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
+        Position = UDim2.new(0.5, startX, 0.5, startY),
         AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundColor3 = COLORS.Background,
         BackgroundTransparency = 1,
@@ -76,6 +90,79 @@ function MonarchUI:CreateWindow(config)
         Parent = ScreenGui
     })
     Window.MainFrame = MainFrame
+    
+    -- Global Tooltip
+    local Tooltip = CreateElement("Frame", {
+        Name = "Tooltip",
+        Size = UDim2.fromOffset(0, 28),
+        BackgroundColor3 = COLORS.Black,
+        BackgroundTransparency = 0.15,
+        BorderSizePixel = 0,
+        ZIndex = 999,
+        Visible = false,
+        Parent = ScreenGui
+    })
+    
+    CreateElement("UICorner", {
+        CornerRadius = UDim.new(0, 6),
+        Parent = Tooltip
+    })
+    
+    local TooltipText = CreateElement("TextLabel", {
+        Size = UDim2.new(1, -12, 1, 0),
+        Position = UDim2.fromOffset(6, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        TextColor3 = COLORS.White,
+        TextSize = 12,
+        Font = Enum.Font.Gotham,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Tooltip
+    })
+    
+    local tooltipConn = nil
+    local tooltipHideConn = nil
+    
+    local function ShowTooltip(text, element)
+        if not element or not element.Parent then return end
+        TooltipText.Text = text
+        local textBounds = game:GetService("TextService"):GetTextSize(text, 12, Enum.Font.Gotham, Vector2.new(400, 28))
+        Tooltip.Size = UDim2.fromOffset(textBounds.X + 14, 28)
+        
+        local absPos = element.AbsolutePosition
+        local absSize = element.AbsoluteSize
+        local x = absPos.X + absSize.X / 2 - Tooltip.AbsoluteSize.X / 2
+        local y = absPos.Y - 34
+        local cam = workspace.CurrentCamera
+        local vpSize = cam and cam.ViewportSize or Vector2.new(1920, 1080)
+        if x < 5 then x = 5 end
+        if x + Tooltip.AbsoluteSize.X > vpSize.X - 5 then x = vpSize.X - Tooltip.AbsoluteSize.X - 5 end
+        if y < 5 then y = absPos.Y + absSize.Y + 8 end
+        
+        Tooltip.Position = UDim2.fromOffset(x, y)
+        Tooltip.BackgroundTransparency = 1
+        Tooltip.Visible = true
+        Tween(Tooltip, {BackgroundTransparency = 0.15}, 0.15)
+    end
+    
+    local function HideTooltip()
+        Tween(Tooltip, {BackgroundTransparency = 1}, 0.1)
+        task.delay(0.12, function()
+            if Tooltip.BackgroundTransparency > 0.9 then
+                Tooltip.Visible = false
+            end
+        end)
+    end
+    
+    function Window:AttachTooltip(element, text)
+        if not element then return end
+        element.MouseEnter:Connect(function()
+            ShowTooltip(text, element)
+        end)
+        element.MouseLeave:Connect(function()
+            HideTooltip()
+        end)
+    end
     
     local Shadow = CreateElement("Frame", {
         Name = "Shadow",
@@ -201,6 +288,61 @@ function MonarchUI:CreateWindow(config)
         Tween(CloseButton, {TextColor3 = COLORS.Gray}, 0.15)
     end)
     
+    local MinimizeButton = CreateElement("TextButton", {
+        Name = "Minimize",
+        Size = UDim2.fromOffset(32, 32),
+        Position = UDim2.new(1, -82, 0.5, -16),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Text = "\u{2013}",
+        TextColor3 = COLORS.Gray,
+        TextSize = 20,
+        Font = Enum.Font.GothamBold,
+        Parent = TopBar
+    })
+    
+    local MinimizedBadge = CreateElement("TextButton", {
+        Name = "MinimizedBadge",
+        Size = UDim2.fromOffset(44, 44),
+        Position = UDim2.fromOffset(20, 20),
+        BackgroundColor3 = COLORS.Orange,
+        BorderSizePixel = 0,
+        Text = "M",
+        TextColor3 = COLORS.White,
+        TextSize = 18,
+        Font = Enum.Font.GothamBold,
+        Visible = false,
+        ZIndex = 100,
+        Parent = ScreenGui
+    })
+    
+    CreateElement("UICorner", {
+        CornerRadius = UDim.new(1, 0),
+        Parent = MinimizedBadge
+    })
+    
+    CreateElement("UIStroke", {
+        Color = COLORS.White,
+        Thickness = 3,
+        Parent = MinimizedBadge
+    })
+    
+    MinimizeButton.MouseButton1Click:Connect(function()
+        Window:Minimize()
+    end)
+    
+    MinimizeButton.MouseEnter:Connect(function()
+        Tween(MinimizeButton, {TextColor3 = COLORS.Orange}, 0.15)
+    end)
+    
+    MinimizeButton.MouseLeave:Connect(function()
+        Tween(MinimizeButton, {TextColor3 = COLORS.Gray}, 0.15)
+    end)
+    
+    MinimizedBadge.MouseButton1Click:Connect(function()
+        Window:Restore()
+    end)
+    
     local TabBar = CreateElement("Frame", {
         Name = "TabBar",
         Size = UDim2.new(0, 180, 1, -50),
@@ -280,6 +422,8 @@ function MonarchUI:CreateWindow(config)
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
+            ScreenGui:SetAttribute("WindowPosX", MainFrame.Position.X.Offset)
+            ScreenGui:SetAttribute("WindowPosY", MainFrame.Position.Y.Offset)
         end
     end)
     
@@ -383,6 +527,17 @@ function MonarchUI:CreateWindow(config)
         
         ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
             TabContent.CanvasSize = UDim2.new(0, 0, 0, ContentLayout.AbsoluteContentSize.Y + 20)
+        end)
+        
+        TabContent.MouseWheelForward:Connect(function()
+            local target = math.max(0, TabContent.CanvasPosition.Y - 60)
+            Tween(TabContent, {CanvasPosition = Vector2.new(0, target)}, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        end)
+        
+        TabContent.MouseWheelBackward:Connect(function()
+            local maxScroll = math.max(0, TabContent.AbsoluteCanvasSize.Y - TabContent.AbsoluteWindowSize.Y)
+            local target = math.min(maxScroll, TabContent.CanvasPosition.Y + 60)
+            Tween(TabContent, {CanvasPosition = Vector2.new(0, target)}, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
         end)
         
         local function ActivateTab()
@@ -846,14 +1001,41 @@ function MonarchUI:CreateWindow(config)
                 Parent = DropdownList
             })
             
+            local hasSearch = #config.Values > 5
+            local searchOffset = hasSearch and 36 or 0
+            
+            local SearchBox
+            if hasSearch then
+                SearchBox = CreateElement("TextBox", {
+                    Size = UDim2.new(1, -10, 0, 28),
+                    Position = UDim2.fromOffset(5, 5),
+                    BackgroundColor3 = COLORS.GrayLight,
+                    BorderSizePixel = 0,
+                    Text = "",
+                    PlaceholderText = "Search...",
+                    PlaceholderColor3 = COLORS.Gray,
+                    TextColor3 = COLORS.Black,
+                    TextSize = 12,
+                    Font = Enum.Font.Gotham,
+                    ZIndex = 101,
+                    Parent = DropdownList
+                })
+                CreateElement("UICorner", {
+                    CornerRadius = UDim.new(0, 6),
+                    Parent = SearchBox
+                })
+            end
+            
             local DropdownScroll = CreateElement("ScrollingFrame", {
-                Size = UDim2.new(1, 0, 1, 0),
+                Size = UDim2.new(1, 0, 1, -searchOffset),
+                Position = UDim2.fromOffset(0, searchOffset),
                 BackgroundTransparency = 1,
                 BorderSizePixel = 0,
                 ScrollBarThickness = 3,
                 ScrollBarImageColor3 = COLORS.Orange,
                 ScrollBarImageTransparency = 0.6,
                 CanvasSize = UDim2.fromOffset(0, 0),
+                ZIndex = 101,
                 Parent = DropdownList
             })
             
@@ -896,8 +1078,9 @@ function MonarchUI:CreateWindow(config)
                 opened = not opened
                 
                 if opened then
+                    if SearchBox then SearchBox.Text = "" end
                     local itemCount = math.min(#config.Values, 5)
-                    local listHeight = itemCount * 32 + 10
+                    local listHeight = itemCount * 32 + 10 + searchOffset
                     local absPos = DropdownFrame.AbsolutePosition
                     local absSize = DropdownFrame.AbsoluteSize
                     local listWidth = absSize.X
@@ -948,8 +1131,10 @@ function MonarchUI:CreateWindow(config)
                     TextColor3 = COLORS.Black,
                     TextSize = 13,
                     Font = Enum.Font.Gotham,
+                    ZIndex = 101,
                     Parent = DropdownScroll
                 })
+                Item:SetAttribute("SearchText", value:lower())
                 
                 CreateElement("UICorner", {
                     CornerRadius = UDim.new(0, 6),
@@ -975,6 +1160,18 @@ function MonarchUI:CreateWindow(config)
             
             for _, value in ipairs(config.Values) do
                 AddItem(value)
+            end
+            
+            if SearchBox then
+                SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+                    local query = SearchBox.Text:lower()
+                    for _, child in ipairs(DropdownScroll:GetChildren()) do
+                        if child:IsA("TextButton") then
+                            local text = child:GetAttribute("SearchText") or child.Text:lower()
+                            child.Visible = query == "" or text:find(query, 1, true) ~= nil
+                        end
+                    end
+                end)
             end
             
             local DropdownObj = {}
@@ -1144,9 +1341,43 @@ function MonarchUI:CreateWindow(config)
             
             local currentColor = config.Value or COLORS.Orange
             
+            local function colorToHex(c)
+                return string.format("#%02X%02X%02X", c.R * 255, c.G * 255, c.B * 255)
+            end
+            
+            local function hexToColor(hex)
+                hex = hex:gsub("#", ""):gsub("0x", "")
+                if #hex ~= 6 then return nil end
+                local r = tonumber(hex:sub(1, 2), 16)
+                local g = tonumber(hex:sub(3, 4), 16)
+                local b = tonumber(hex:sub(5, 6), 16)
+                if r and g and b then
+                    return Color3.fromRGB(r, g, b)
+                end
+                return nil
+            end
+            
+            local HexInput = CreateElement("TextBox", {
+                Size = UDim2.fromOffset(70, 22),
+                Position = UDim2.new(1, -120, 0.5, -11),
+                BackgroundColor3 = COLORS.GrayLight,
+                BorderSizePixel = 0,
+                Text = colorToHex(currentColor),
+                TextColor3 = COLORS.Black,
+                TextSize = 11,
+                Font = Enum.Font.GothamMedium,
+                ClearTextOnFocus = false,
+                Parent = Colorpicker
+            })
+            
+            CreateElement("UICorner", {
+                CornerRadius = UDim.new(0, 4),
+                Parent = HexInput
+            })
+            
             local ColorPreview = CreateElement("TextButton", {
-                Size = UDim2.fromOffset(35, 25),
-                Position = UDim2.new(1, -45, 0.5, -12.5),
+                Size = UDim2.fromOffset(28, 22),
+                Position = UDim2.new(1, -42, 0.5, -11),
                 BackgroundColor3 = currentColor,
                 BorderSizePixel = 0,
                 Text = "",
@@ -1155,7 +1386,7 @@ function MonarchUI:CreateWindow(config)
             })
             
             CreateElement("UICorner", {
-                CornerRadius = UDim.new(0, 6),
+                CornerRadius = UDim.new(0, 4),
                 Parent = ColorPreview
             })
             
@@ -1164,6 +1395,19 @@ function MonarchUI:CreateWindow(config)
                 Thickness = 2,
                 Parent = ColorPreview
             })
+            
+            HexInput.FocusLost:Connect(function()
+                local col = hexToColor(HexInput.Text)
+                if col then
+                    currentColor = col
+                    ColorPreview.BackgroundColor3 = currentColor
+                    if config.Callback then
+                        config.Callback(currentColor)
+                    end
+                else
+                    HexInput.Text = colorToHex(currentColor)
+                end
+            end)
             
             local PaletteOpen = false
             local PaletteFrame
@@ -1277,6 +1521,7 @@ function MonarchUI:CreateWindow(config)
                     Swatch.MouseButton1Click:Connect(function()
                         currentColor = color
                         ColorPreview.BackgroundColor3 = currentColor
+                        HexInput.Text = colorToHex(currentColor)
                         if config.Callback then
                             config.Callback(currentColor)
                         end
@@ -1441,6 +1686,27 @@ function MonarchUI:CreateWindow(config)
                 end
             end)
         end
+    end
+    
+    function Window:Minimize()
+        Window.Minimized = true
+        Tween(MainFrame, {Position = UDim2.new(0.5, 0, 1.2, 0)}, 0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        Tween(Scale, {Scale = 0.8}, 0.3)
+        task.delay(0.35, function()
+            if Window.Minimized then
+                MainFrame.Visible = false
+                MinimizedBadge.Visible = true
+                Tween(MinimizedBadge, {BackgroundTransparency = 0}, 0.2)
+            end
+        end)
+    end
+    
+    function Window:Restore()
+        Window.Minimized = false
+        MinimizedBadge.Visible = false
+        MainFrame.Visible = true
+        Tween(MainFrame, {Position = UDim2.new(0.5, 0, 0.5, 0)}, 0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        Tween(Scale, {Scale = 1}, 0.3)
     end
     
     local toggleKeyConnection = nil
